@@ -25,20 +25,20 @@ import time
 warnings.filterwarnings('ignore')
 
 print("=" * 70)
-print("  Traffic Demand Prediction — Neural Network Pipeline")
+print("  Traffic Demand Prediction - Neural Network Pipeline")
 print("=" * 70)
 
-# ─────────────────────────────────────────────────────────────────────
+# ---------------------------------------------------------------------
 # 1. LOAD DATA
-# ─────────────────────────────────────────────────────────────────────
+# ---------------------------------------------------------------------
 print("\n[1/8] Loading datasets...")
 train = pd.read_csv('dataset/train.csv')
 test  = pd.read_csv('dataset/test.csv')
 print(f"  Train: {train.shape}, Test: {test.shape}")
 
-# ─────────────────────────────────────────────────────────────────────
+# ---------------------------------------------------------------------
 # 2. FEATURE ENGINEERING
-# ─────────────────────────────────────────────────────────────────────
+# ---------------------------------------------------------------------
 print("\n[2/8] Engineering features...")
 
 df_all = pd.concat([train, test], ignore_index=True)
@@ -79,9 +79,9 @@ df_all['cos_time']     = np.cos(2 * np.pi * df_all['time_minutes'] / 1440)
 df_all['sin_time_12h'] = np.sin(2 * np.pi * df_all['time_minutes'] / 720)
 df_all['cos_time_12h'] = np.cos(2 * np.pi * df_all['time_minutes'] / 720)
 
-# ─────────────────────────────────────────────────────────────────────
+# ---------------------------------------------------------------------
 # 3. IMPUTATION
-# ─────────────────────────────────────────────────────────────────────
+# ---------------------------------------------------------------------
 print("\n[3/8] Imputing missing values...")
 
 # RoadType
@@ -125,9 +125,9 @@ df_all['Weather'] = df_all['Weather'].fillna(df_all['timestamp'].map(ts_weather)
 
 print(f"  Remaining NAs: {df_all.isnull().sum().sum()}")
 
-# ─────────────────────────────────────────────────────────────────────
+# ---------------------------------------------------------------------
 # 4. LABEL ENCODING + DAY 48 FEATURES
-# ─────────────────────────────────────────────────────────────────────
+# ---------------------------------------------------------------------
 print("\n[4/8] Encoding categoricals and building Day 48 features...")
 
 cat_cols = ['RoadType', 'LargeVehicles', 'Landmarks', 'Weather', 'geo_p4', 'geo_p5', 'geohash']
@@ -232,9 +232,9 @@ df_49    = add_advanced_features(df_49)
 
 print(f"  Total features: {len(train_df.columns)}")
 
-# ─────────────────────────────────────────────────────────────────────
+# ---------------------------------------------------------------------
 # 5. NEURAL NETWORK DEFINITION
-# ─────────────────────────────────────────────────────────────────────
+# ---------------------------------------------------------------------
 print("\n[5/8] Defining Neural Network architecture...")
 
 # Cardinalities for embeddings
@@ -363,9 +363,9 @@ class DemandNet(nn.Module):
         return x.squeeze(1)
 
 
-# ─────────────────────────────────────────────────────────────────────
+# ---------------------------------------------------------------------
 # 6. PREPARE DATA FOR NN
-# ─────────────────────────────────────────────────────────────────────
+# ---------------------------------------------------------------------
 print("\n[6/8] Preparing data tensors...")
 
 # Normalize continuous features
@@ -400,9 +400,9 @@ print(f"  Continuous features: {len(continuous_features)}")
 print(f"  Categorical features: {len(cat_feature_cols)}")
 
 
-# ─────────────────────────────────────────────────────────────────────
+# ---------------------------------------------------------------------
 # 7. TRAIN NN WITH MULTI-SEED
-# ─────────────────────────────────────────────────────────────────────
+# ---------------------------------------------------------------------
 print("\n[7/8] Training Neural Networks (multi-seed)...")
 
 NUM_SEEDS = 5
@@ -475,10 +475,10 @@ for seed_idx, seed in enumerate([42, 123, 2024, 777, 314]):
             patience_counter += 1
         
         if (epoch + 1) % 50 == 0:
-            print(f"    Epoch {epoch+1:3d}: loss={epoch_loss/n_batches:.6f}, val_R²={val_r2:.4f}, best_R²={best_r2:.4f}")
+            print(f"    Epoch {epoch+1:3d}: loss={epoch_loss/n_batches:.6f}, val_R2={val_r2:.4f}, best_R2={best_r2:.4f}")
         
         if patience_counter >= PATIENCE:
-            print(f"    Early stopping at epoch {epoch+1}, best R²={best_r2:.4f}")
+            print(f"    Early stopping at epoch {epoch+1}, best R2={best_r2:.4f}")
             break
     
     # Load best model and predict
@@ -497,19 +497,19 @@ for seed_idx, seed in enumerate([42, 123, 2024, 777, 314]):
         nn_preds_test_all.append(preds_test)
     
     elapsed = time.time() - t0
-    print(f"    Final: best_R²={best_r2:.4f}, time={elapsed:.1f}s")
+    print(f"    Final: best_R2={best_r2:.4f}, time={elapsed:.1f}s")
 
 # Average across seeds
 nn_preds_d49_avg  = np.mean(nn_preds_d49_all, axis=0)
 nn_preds_test_avg = np.mean(nn_preds_test_all, axis=0)
 
 nn_r2_d49 = r2_score(y_d49, nn_preds_d49_avg)
-print(f"\n  NN Ensemble R² on Day 49: {nn_r2_d49:.4f}")
+print(f"\n  NN Ensemble R2 on Day 49: {nn_r2_d49:.4f}")
 
 
-# ─────────────────────────────────────────────────────────────────────
+# ---------------------------------------------------------------------
 # 8. GBDT MODELS + BLEND
-# ─────────────────────────────────────────────────────────────────────
+# ---------------------------------------------------------------------
 print("\n[8/8] Training GBDT models and blending...")
 
 features_gbdt = [
@@ -567,7 +567,7 @@ lr_cal.fit(preds_A_49.reshape(-1, 1), df_49[target].values)
 preds_A_49_cal = lr_cal.predict(preds_A_49.reshape(-1, 1)).ravel()
 preds_A_test_cal = lr_cal.predict(preds_A_test.reshape(-1, 1)).ravel()
 r2_A_49 = r2_score(df_49[target], preds_A_49_cal)
-print(f"  Model A R² on Day 49 (calibrated): {r2_A_49:.4f}")
+print(f"  Model A R2 on Day 49 (calibrated): {r2_A_49:.4f}")
 
 # Model B: Train on Day 49 ONLY
 print("  Training GBDT Model B (Day 49 only)...")
@@ -598,9 +598,9 @@ cat_B.fit(X_B, y_B)
 preds_B_test = (lgb_B.predict(test_df[features_gbdt]) + xgb_B.predict(test_df[features_gbdt]) + cat_B.predict(test_df[features_gbdt])) / 3.0
 preds_B_49   = (lgb_B.predict(df_49[features_gbdt]) + xgb_B.predict(df_49[features_gbdt]) + cat_B.predict(df_49[features_gbdt])) / 3.0
 r2_B_49 = r2_score(df_49[target], preds_B_49)
-print(f"  Model B R² on Day 49 (in-sample): {r2_B_49:.4f}")
+print(f"  Model B R2 on Day 49 (in-sample): {r2_B_49:.4f}")
 
-# ── 3-WAY BLEND SEARCH: Model A (cal) + Model B + NN ──
+# -- 3-WAY BLEND SEARCH: Model A (cal) + Model B + NN --
 print("\n  Searching for optimal 3-way blend...")
 
 best_blend_r2 = -1
@@ -617,7 +617,7 @@ for wNN in np.arange(0.0, 1.01, 0.05):
             best_blend_r2 = r2
             best_wA, best_wB, best_wNN = wA, wB, wNN
 
-print(f"  Best 3-way blend: {best_wA:.2f}*A + {best_wB:.2f}*B + {best_wNN:.2f}*NN → R²={best_blend_r2:.4f}")
+print(f"  Best 3-way blend: {best_wA:.2f}*A + {best_wB:.2f}*B + {best_wNN:.2f}*NN -> R2={best_blend_r2:.4f}")
 
 # Also search 2-way: GBDT_best vs NN
 # First find best GBDT-only blend
@@ -642,13 +642,13 @@ for w in np.arange(0.0, 1.01, 0.05):
         best_nn_gbdt_r2 = r2
         best_nn_w = w
 
-print(f"  Best GBDT-only blend: {best_gbdt_wB:.2f}*B + {1-best_gbdt_wB:.2f}*A → R²={best_gbdt_r2:.4f}")
-print(f"  Best NN+GBDT blend:  {best_nn_w:.2f}*NN + {1-best_nn_w:.2f}*GBDT_best → R²={best_nn_gbdt_r2:.4f}")
+print(f"  Best GBDT-only blend: {best_gbdt_wB:.2f}*B + {1-best_gbdt_wB:.2f}*A -> R2={best_gbdt_r2:.4f}")
+print(f"  Best NN+GBDT blend:  {best_nn_w:.2f}*NN + {1-best_nn_w:.2f}*GBDT_best -> R2={best_nn_gbdt_r2:.4f}")
 
 
-# ─────────────────────────────────────────────────────────────────────
+# ---------------------------------------------------------------------
 # GENERATE SUBMISSIONS
-# ─────────────────────────────────────────────────────────────────────
+# ---------------------------------------------------------------------
 print("\n  Generating submissions...")
 
 submissions = []
@@ -681,22 +681,22 @@ for fname, preds, desc in submissions:
     print(f"  {fname:40s} | {desc:35s} | mean={preds.mean():.4f}, std={preds.std():.4f}")
 
 
-# ─────────────────────────────────────────────────────────────────────
+# ---------------------------------------------------------------------
 # SUMMARY
-# ─────────────────────────────────────────────────────────────────────
+# ---------------------------------------------------------------------
 print()
 print("=" * 70)
 print("  SUMMARY")
 print("=" * 70)
-print(f"  NN Ensemble R² on Day 49:          {nn_r2_d49:.4f}")
-print(f"  GBDT Model A R² (Day 49 cal):      {r2_A_49:.4f}")
-print(f"  GBDT Model B R² (Day 49 in-sample):{r2_B_49:.4f}")
-print(f"  Best GBDT blend R² (Day 49):       {best_gbdt_r2:.4f}")
-print(f"  Best 3-way blend R² (Day 49):      {best_blend_r2:.4f}")
-print(f"  Best NN+GBDT blend R² (Day 49):    {best_nn_gbdt_r2:.4f}")
+print(f"  NN Ensemble R2 on Day 49:          {nn_r2_d49:.4f}")
+print(f"  GBDT Model A R2 (Day 49 cal):      {r2_A_49:.4f}")
+print(f"  GBDT Model B R2 (Day 49 in-sample):{r2_B_49:.4f}")
+print(f"  Best GBDT blend R2 (Day 49):       {best_gbdt_r2:.4f}")
+print(f"  Best 3-way blend R2 (Day 49):      {best_blend_r2:.4f}")
+print(f"  Best NN+GBDT blend R2 (Day 49):    {best_nn_gbdt_r2:.4f}")
 print()
 print("  Recommended submission order:")
-print("    1. submission_3way_blend.csv      (highest Day 49 R²)")
+print("    1. submission_3way_blend.csv      (highest Day 49 R2)")
 print("    2. submission_nn_gbdt_blend.csv   (NN+GBDT 2-way)")
 print("    3. submission_gbdt.csv            (GBDT baseline)")
 print("    4. submission_nn.csv              (pure NN)")
